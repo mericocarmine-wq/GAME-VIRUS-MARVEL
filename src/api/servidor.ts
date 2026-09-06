@@ -3,6 +3,7 @@ import jwt from '@fastify/jwt';
 import websocket from '@fastify/websocket';
 import { crearMazoInicial } from '../application/CrearMazoInicial';
 import { Partida } from '../application/Partida';
+import { ejecutarTurnoMaquina } from '../application/JugadorMaquina';
 import { Jugador } from '../domain/entities/Jugador';
 import { IRepositorioPartidas, RepositorioPartidasMemoria } from '../infrastructure/RepositorioPartidasMemoria';
 import { RepositorioUsuariosMemoria } from '../infrastructure/RepositorioUsuariosMemoria';
@@ -61,6 +62,14 @@ export function crearServidor(repositorio: IRepositorioPartidas = new Repositori
     ejecutarJugada(partida, body);
     canal.publicar((request.params as { id: string }).id, partida, serializar);
     return serializar(partida);
+  });
+  app.post('/partidas/:id/maquina/turno', { onRequest: [autenticar] }, async (request) => {
+    const partidaId = (request.params as { id: string }).id;
+    const partida = obtener(repositorio, partidaId);
+    const body = request.body as Record<string, unknown>;
+    ejecutarTurnoMaquina(partida, texto(body, 'jugadorMaquinaId'));
+    canal.publicar(partidaId, partida, serializar);
+    return serializar(partida, idUsuario(request.user));
   });
   return app;
 }
