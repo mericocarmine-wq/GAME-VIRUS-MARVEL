@@ -1,10 +1,12 @@
 import Fastify from 'fastify';
 import jwt from '@fastify/jwt';
+import websocket from '@fastify/websocket';
 import { crearMazoInicial } from '../application/CrearMazoInicial';
 import { Partida } from '../application/Partida';
 import { Jugador } from '../domain/entities/Jugador';
 import { IRepositorioPartidas, RepositorioPartidasMemoria } from '../infrastructure/RepositorioPartidasMemoria';
 import { RepositorioUsuariosMemoria } from '../infrastructure/RepositorioUsuariosMemoria';
+import { CanalPartidas } from './CanalPartidas';
 
 class ErrorHttp extends Error {
   constructor(readonly codigo: number, mensaje: string) { super(mensaje); }
@@ -13,6 +15,8 @@ class ErrorHttp extends Error {
 export function crearServidor(repositorio: IRepositorioPartidas = new RepositorioPartidasMemoria(), usuarios = new RepositorioUsuariosMemoria()) {
   const app = Fastify({ logger: false });
   app.register(jwt, { secret: process.env.JWT_SECRET ?? 'solo-desarrollo-cambia-este-secreto' });
+  app.register(websocket);
+  const canal = new CanalPartidas();
   app.setErrorHandler((error, _request, reply) => reply.status(error instanceof ErrorHttp ? error.codigo : (typeof (error as { statusCode?: unknown }).statusCode === 'number' ? (error as { statusCode: number }).statusCode : 400)).send({
     error: error instanceof Error ? error.message : 'Error inesperado',
   }));
@@ -39,11 +43,23 @@ export function crearServidor(repositorio: IRepositorioPartidas = new Repositori
     return reply.status(201).send({ id, partida: serializar(partida) });
   });
   app.get('/partidas/:id', { onRequest: [autenticar] }, async (request) => serializar(obtener(repositorio, (request.params as { id: string }).id), idUsuario(request.user)));
+  app.get('/partidas/:id/eventos', { websocket: true }, (socket, request) => {
+    const token = (request.query as { token?: string }).token;
+    let usuarioId: string;
+    try { usuarioId = idUsuario(app.jwt.verify(token ?? '')); } catch { socket.close(1008, 'No autorizado'); return; }
+    const partidaId = (request.params as { id: string }).id;
+    const partida = repositorio.obtener(partidaId);
+    if (!partida) { socket.close(1008, 'Partida no encontrada'); return; }
+    const cancelar = canal.suscribir(partidaId, { usuarioId, enviar: (mensaje) => socket.send(mensaje) });
+    socket.send(JSON.stringify({ tipo: 'partida.actualizada', partida: serializar(partida, usuarioId) }));
+    socket.on('close', cancelar);
+  });
   app.post('/partidas/:id/jugadas', { onRequest: [autenticar] }, async (request) => {
     const partida = obtener(repositorio, (request.params as { id: string }).id);
     const body = request.body as Record<string, unknown>;
     if (texto(body, 'jugadorId') !== idUsuario(request.user)) throw new ErrorHttp(403, 'No puedes jugar por otro jugador');
     ejecutarJugada(partida, body);
+    canal.publicar((request.params as { id: string }).id, partida, serializar);
     return serializar(partida);
   });
   return app;
@@ -83,7 +99,7 @@ function leerIds(valor: unknown): string[] {
   if (!Array.isArray(valor) || !valor.every((id) => typeof id === 'string')) throw new Error('cartaIds debe ser una lista de texto');
   return valor;
 }
-function serializar(partida: Partida, usuarioId?: string) {
+export function serializar(partida: Partida, usuarioId?: string) {
   return {
     turnoDe: partida.jugadorActual.id, ganador: partida.ganador?.id ?? null, descarte: partida.descarte.cantidad,
     jugadores: partida.jugadores.map((jugador) => ({ id: jugador.id, nombre: jugador.nombre, mano: jugador.id === usuarioId ? jugador.mano.map(({ id, nombre, tipo }) => ({ id, nombre, tipo })) : undefined, cartasEnMano: jugador.mano.length, heroes: jugador.zona.heroes.map(({ heroe, estado }) => ({ id: heroe.id, nombre: heroe.nombre, estado })) })),
