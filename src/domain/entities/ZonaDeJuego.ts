@@ -12,6 +12,31 @@ export class ZonaDeJuego {
   }
 
   agregarHeroe(heroe: CartaHeroe): HeroeEnJuego {
+    this.validarNuevoHeroe(heroe);
+    const enJuego = new HeroeEnJuego(heroe);
+    this.heroesInternos.push(enJuego);
+    return enJuego;
+  }
+
+  transferirHeroeDesde(origen: ZonaDeJuego, id: string): HeroeEnJuego {
+    if (origen === this) throw new Error('El origen y destino deben ser distintos');
+    const heroe = origen.buscarHeroe(id);
+    if (!heroe) throw new Error(`No existe el héroe ${id}`);
+    this.validarNuevoHeroe(heroe.heroe);
+    origen.retirarHeroe(id);
+    this.heroesInternos.push(heroe);
+    return heroe;
+  }
+
+  intercambiarCon(otra: ZonaDeJuego): void {
+    if (otra === this) throw new Error('Las zonas deben ser distintas');
+    const propios = this.heroesInternos.splice(0);
+    const ajenos = otra.heroesInternos.splice(0);
+    this.heroesInternos.push(...ajenos);
+    otra.heroesInternos.push(...propios);
+  }
+
+  private validarNuevoHeroe(heroe: CartaHeroe): void {
     if (this.heroesInternos.length >= ZonaDeJuego.MAX_HEROES) {
       throw new Error('La zona de juego ya tiene seis héroes');
     }
@@ -25,9 +50,6 @@ export class ZonaDeJuego {
     if (heroe.esIntangible && this.heroesInternos.some(({ heroe: actual }) => actual.esIntangible)) {
       throw new Error('Ya hay un héroe intangible');
     }
-    const enJuego = new HeroeEnJuego(heroe);
-    this.heroesInternos.push(enJuego);
-    return enJuego;
   }
 
   buscarHeroe(id: string): HeroeEnJuego | undefined {

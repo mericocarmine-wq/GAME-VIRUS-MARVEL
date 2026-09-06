@@ -1,4 +1,5 @@
 import { CartaAliado } from './CartaAliado';
+import { Carta } from './Carta';
 import { CartaHeroe } from './CartaHeroe';
 import { CartaPoder } from './CartaPoder';
 import { CartaVillano } from './CartaVillano';
@@ -54,6 +55,10 @@ export class HeroeEnJuego {
 
   get estaPreparado(): boolean {
     return esEstadoPreparado(this.estado);
+  }
+
+  get cartasEnJuego(): readonly Carta[] {
+    return [this.heroe, ...this.proteccionesInternas, ...(this.villanoInterno ? [this.villanoInterno] : [])];
   }
 
   protegerCon(carta: Proteccion): void {

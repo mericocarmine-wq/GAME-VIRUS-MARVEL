@@ -1,11 +1,13 @@
 import { Carta } from '../domain/entities/Carta';
 import { CartaAliado } from '../domain/entities/CartaAliado';
+import { CartaAccion } from '../domain/entities/CartaAccion';
 import { CartaHeroe } from '../domain/entities/CartaHeroe';
 import { CartaPoder } from '../domain/entities/CartaPoder';
 import { CartaVillano } from '../domain/entities/CartaVillano';
 import { Jugador } from '../domain/entities/Jugador';
 import { Mazo } from '../domain/entities/Mazo';
 import { PilaDescarte } from '../domain/entities/PilaDescarte';
+import { crearRegistroAcciones, RegistroAcciones } from './acciones';
 
 export class Partida {
   private indiceTurno = 0;
@@ -15,12 +17,14 @@ export class Partida {
     private readonly jugadoresInternos: Jugador[],
     readonly mazo: Mazo,
     readonly descarte: PilaDescarte,
+    private readonly acciones: RegistroAcciones,
   ) {}
 
   static iniciar(params: {
     jugadores: readonly Jugador[];
     mazo: Mazo;
     descarte?: PilaDescarte;
+    acciones?: RegistroAcciones;
   }): Partida {
     if (params.jugadores.length < 2 || params.jugadores.length > 5) {
       throw new Error('La partida requiere entre dos y cinco jugadores');
@@ -41,6 +45,7 @@ export class Partida {
       [...params.jugadores],
       params.mazo,
       params.descarte ?? new PilaDescarte(),
+      params.acciones ?? crearRegistroAcciones(),
     );
     for (const jugador of partida.jugadoresInternos) partida.reponerMano(jugador);
     return partida;
@@ -63,6 +68,18 @@ export class Partida {
     const carta = this.cartaComo(jugador, cartaId, CartaHeroe, 'Héroe');
     jugador.zona.agregarHeroe(carta);
     jugador.retirarCarta(cartaId);
+    this.finalizarTurno(jugador);
+  }
+
+  jugarAccion(jugadorId: string, cartaId: string, parametros: unknown): void {
+    const jugador = this.validarTurno(jugadorId);
+    const carta = this.cartaComo(jugador, cartaId, CartaAccion, 'Acción');
+    const descartes = this.acciones.obtener(carta.idAccion).ejecutar(
+      { actor: jugador, jugadores: this.jugadoresInternos },
+      parametros,
+    );
+    jugador.retirarCarta(cartaId);
+    this.descarte.agregar(carta, ...descartes);
     this.finalizarTurno(jugador);
   }
 
