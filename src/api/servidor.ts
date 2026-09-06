@@ -1,20 +1,34 @@
 import Fastify from 'fastify';
+import jwt from '@fastify/jwt';
 import { crearMazoInicial } from '../application/CrearMazoInicial';
 import { Partida } from '../application/Partida';
 import { Jugador } from '../domain/entities/Jugador';
 import { IRepositorioPartidas, RepositorioPartidasMemoria } from '../infrastructure/RepositorioPartidasMemoria';
+import { RepositorioUsuariosMemoria } from '../infrastructure/RepositorioUsuariosMemoria';
 
 class ErrorHttp extends Error {
   constructor(readonly codigo: number, mensaje: string) { super(mensaje); }
 }
 
-export function crearServidor(repositorio: IRepositorioPartidas = new RepositorioPartidasMemoria()) {
+export function crearServidor(repositorio: IRepositorioPartidas = new RepositorioPartidasMemoria(), usuarios = new RepositorioUsuariosMemoria()) {
   const app = Fastify({ logger: false });
-  app.setErrorHandler((error, _request, reply) => reply.status(error instanceof ErrorHttp ? error.codigo : 400).send({
+  app.register(jwt, { secret: process.env.JWT_SECRET ?? 'solo-desarrollo-cambia-este-secreto' });
+  app.setErrorHandler((error, _request, reply) => reply.status(error instanceof ErrorHttp ? error.codigo : (typeof (error as { statusCode?: unknown }).statusCode === 'number' ? (error as { statusCode: number }).statusCode : 400)).send({
     error: error instanceof Error ? error.message : 'Error inesperado',
   }));
 
   app.get('/salud', async () => ({ estado: 'ok' }));
+  app.post('/auth/registro', async (request, reply) => {
+    const body = request.body as Record<string, unknown>;
+    const usuario = usuarios.crear(texto(body, 'nombre'), texto(body, 'contrasena'));
+    return reply.status(201).send({ id: usuario.id, token: app.jwt.sign({ sub: usuario.id, nombre: usuario.nombre }) });
+  });
+  app.post('/auth/login', async (request) => {
+    const body = request.body as Record<string, unknown>;
+    const usuario = usuarios.autenticar(texto(body, 'nombre'), texto(body, 'contrasena'));
+    if (!usuario) throw new ErrorHttp(401, 'Credenciales inválidas');
+    return { id: usuario.id, token: app.jwt.sign({ sub: usuario.id, nombre: usuario.nombre }) };
+  });
   app.post('/partidas', async (request, reply) => {
     const body = request.body as { jugadores?: { id?: string; nombre?: string }[] };
     if (!Array.isArray(body?.jugadores)) throw new Error('jugadores es obligatorio');
@@ -24,14 +38,21 @@ export function crearServidor(repositorio: IRepositorioPartidas = new Repositori
     repositorio.guardar(id, partida);
     return reply.status(201).send({ id, partida: serializar(partida) });
   });
-  app.get('/partidas/:id', async (request) => serializar(obtener(repositorio, (request.params as { id: string }).id)));
-  app.post('/partidas/:id/jugadas', async (request) => {
+  app.get('/partidas/:id', { onRequest: [autenticar] }, async (request) => serializar(obtener(repositorio, (request.params as { id: string }).id), idUsuario(request.user)));
+  app.post('/partidas/:id/jugadas', { onRequest: [autenticar] }, async (request) => {
     const partida = obtener(repositorio, (request.params as { id: string }).id);
     const body = request.body as Record<string, unknown>;
+    if (texto(body, 'jugadorId') !== idUsuario(request.user)) throw new ErrorHttp(403, 'No puedes jugar por otro jugador');
     ejecutarJugada(partida, body);
     return serializar(partida);
   });
   return app;
+}
+
+async function autenticar(request: { jwtVerify: () => Promise<unknown> }): Promise<void> { await request.jwtVerify(); }
+function idUsuario(valor: unknown): string {
+  if (!valor || typeof valor !== 'object' || typeof (valor as { sub?: unknown }).sub !== 'string') throw new ErrorHttp(401, 'Token inválido');
+  return (valor as { sub: string }).sub;
 }
 
 function obtener(repositorio: IRepositorioPartidas, id: string): Partida {
@@ -62,9 +83,9 @@ function leerIds(valor: unknown): string[] {
   if (!Array.isArray(valor) || !valor.every((id) => typeof id === 'string')) throw new Error('cartaIds debe ser una lista de texto');
   return valor;
 }
-function serializar(partida: Partida) {
+function serializar(partida: Partida, usuarioId?: string) {
   return {
     turnoDe: partida.jugadorActual.id, ganador: partida.ganador?.id ?? null, descarte: partida.descarte.cantidad,
-    jugadores: partida.jugadores.map((jugador) => ({ id: jugador.id, nombre: jugador.nombre, mano: jugador.mano.map(({ id, nombre, tipo }) => ({ id, nombre, tipo })), heroes: jugador.zona.heroes.map(({ heroe, estado }) => ({ id: heroe.id, nombre: heroe.nombre, estado })) })),
+    jugadores: partida.jugadores.map((jugador) => ({ id: jugador.id, nombre: jugador.nombre, mano: jugador.id === usuarioId ? jugador.mano.map(({ id, nombre, tipo }) => ({ id, nombre, tipo })) : undefined, cartasEnMano: jugador.mano.length, heroes: jugador.zona.heroes.map(({ heroe, estado }) => ({ id: heroe.id, nombre: heroe.nombre, estado })) })),
   };
 }
