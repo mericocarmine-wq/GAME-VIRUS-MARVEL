@@ -13,3 +13,6 @@ npm run typecheck
 La fase actual incluye las cartas, compatibilidad de colores, héroes en juego,
 protección, bloqueo, combate, captura y la condición de victoria de la zona de juego.
 Las reglas están contrastadas con el reglamento oficial de Virus! Marvel.
+
+La capa de aplicación incorpora partidas de 2 a 5 personas, reparto, manos,
+mazo, reciclaje del descarte y el ciclo completo de cada turno.
