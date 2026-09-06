@@ -5,7 +5,8 @@ import { Color } from '../value-objects/Color';
  * Carta de Héroe. Es multicolor XOR intangible XOR "normal"
  * (no pueden coexistir ambas propiedades especiales en la misma carta
  * según el catálogo oficial: Capitana Marvel es multicolor,
- * Visión es intangible, son cartas distintas).
+ * Visión es intangible, son cartas distintas). Los dos héroes
+ * especiales carecen de color base.
  *
  * NOTA: el estado en mesa (libre/protegido/blindado/bloqueado) NO vive
  * aquí. Esta clase es la carta como concepto de catálogo; su posición
@@ -14,7 +15,7 @@ import { Color } from '../value-objects/Color';
  * "qué le está pasando ahora en la partida".
  */
 export class CartaHeroe extends Carta {
-  readonly color: Color | null; // null solo si esMulticolor
+  readonly color: Color | null; // null para multicolor o intangible
   readonly esMulticolor: boolean;
   readonly esIntangible: boolean;
 
@@ -35,12 +36,12 @@ export class CartaHeroe extends Carta {
         `Héroe "${params.nombre}": no puede ser multicolor e intangible a la vez`,
       );
     }
-    if (esMulticolor && params.color !== null) {
+    if ((esMulticolor || esIntangible) && params.color !== null) {
       throw new Error(
-        `Héroe "${params.nombre}": multicolor no debe tener un color fijo`,
+        `Héroe "${params.nombre}": un héroe especial no debe tener color fijo`,
       );
     }
-    if (!esMulticolor && params.color === null) {
+    if (!esMulticolor && !esIntangible && params.color === null) {
       throw new Error(
         `Héroe "${params.nombre}": un héroe no multicolor requiere color`,
       );

@@ -8,7 +8,7 @@ import { aliadoCompatibleConHeroe, poderCompatibleConHeroe, villanoCompatibleCon
 describe('compatibilidad de color', () => {
   const rojo = new CartaHeroe({ id: 'h1', nombre: 'Iron Man', color: 'rojo' });
   const multi = new CartaHeroe({ id: 'h2', nombre: 'Capitana Marvel', color: null, esMulticolor: true });
-  const intangible = new CartaHeroe({ id: 'h3', nombre: 'Visión', color: 'azul', esIntangible: true });
+  const intangible = new CartaHeroe({ id: 'h3', nombre: 'Visión', color: null, esIntangible: true });
 
   it('exige el mismo color salvo para héroes multicolor', () => {
     expect(poderCompatibleConHeroe(new CartaPoder({ id: 'p1', nombre: 'Poder', color: 'rojo' }), rojo)).toBe(true);

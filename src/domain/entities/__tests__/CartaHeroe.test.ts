@@ -23,10 +23,11 @@ describe('CartaHeroe', () => {
     const h = new CartaHeroe({
       id: 'h6',
       nombre: 'Visión',
-      color: 'azul',
+      color: null,
       esIntangible: true,
     });
     expect(h.esIntangible).toBe(true);
+    expect(h.color).toBeNull();
   });
 
   it('rechaza multicolor + intangible simultáneos', () => {

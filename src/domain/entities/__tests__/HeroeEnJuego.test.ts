@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CartaHeroe } from '../CartaHeroe';
+import { CartaAliado } from '../CartaAliado';
 import { CartaPoder } from '../CartaPoder';
 import { CartaVillano } from '../CartaVillano';
 import { HeroeEnJuego } from '../HeroeEnJuego';
@@ -37,5 +38,20 @@ describe('HeroeEnJuego', () => {
     actual.protegerCon(poder('p1'));
     actual.protegerCon(poder('p2'));
     expect(() => actual.bloquearCon(villano())).toThrow('inmune');
+  });
+
+  it('un aliado blinda sin descartar el poder que ya protegía', () => {
+    const actual = heroe();
+    actual.protegerCon(poder('p1'));
+    actual.protegerCon(new CartaAliado({ id: 'a1', nombre: 'Aliado', colores: ['rojo', 'verde'] }));
+    expect(actual.estado).toBe('blindado');
+    expect(actual.protecciones).toHaveLength(2);
+  });
+
+  it('un aliado puede combatir a un villano de uno de sus colores', () => {
+    const actual = heroe();
+    actual.bloquearCon(villano());
+    const aliado = new CartaAliado({ id: 'a1', nombre: 'Aliado', colores: ['rojo', 'verde'] });
+    expect(actual.combatirCon(aliado).id).toBe('v1');
   });
 });

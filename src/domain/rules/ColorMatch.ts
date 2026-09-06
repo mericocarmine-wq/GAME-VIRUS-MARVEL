@@ -6,7 +6,7 @@ import { Color } from '../value-objects/Color';
 
 /** Un héroe multicolor admite cartas de cualquiera de los cuatro colores. */
 export function heroeAdmiteColor(heroe: CartaHeroe, color: Color): boolean {
-  return heroe.esMulticolor || heroe.color === color;
+  return !heroe.esIntangible && (heroe.esMulticolor || heroe.color === color);
 }
 
 export function poderCompatibleConHeroe(
@@ -30,7 +30,25 @@ export function villanoCompatibleConHeroe(
   villano: CartaVillano,
   heroe: CartaHeroe,
 ): boolean {
-  return villano.colorObjetivo === 'cualquiera' ||
+  return !heroe.esIntangible && (
+    villano.colorObjetivo === 'cualquiera' ||
     heroe.esMulticolor ||
-    heroe.color === villano.colorObjetivo;
+    heroe.color === villano.colorObjetivo
+  );
+}
+
+export function poderCompatibleConVillano(
+  poder: CartaPoder,
+  villano: CartaVillano,
+): boolean {
+  return villano.colorObjetivo !== 'cualquiera' &&
+    poder.color === villano.colorObjetivo;
+}
+
+export function aliadoCompatibleConVillano(
+  aliado: CartaAliado,
+  villano: CartaVillano,
+): boolean {
+  return villano.colorObjetivo === 'cualquiera' ||
+    aliado.cubreColor(villano.colorObjetivo);
 }

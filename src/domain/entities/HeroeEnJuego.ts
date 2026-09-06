@@ -4,12 +4,21 @@ import { CartaPoder } from './CartaPoder';
 import { CartaVillano } from './CartaVillano';
 import {
   aliadoCompatibleConHeroe,
+  aliadoCompatibleConVillano,
   poderCompatibleConHeroe,
+  poderCompatibleConVillano,
   villanoCompatibleConHeroe,
 } from '../rules/ColorMatch';
 import { EstadoHeroe, esEstadoPreparado } from '../value-objects/EstadoHeroe';
 
 export type Proteccion = CartaPoder | CartaAliado;
+export type Combatiente = CartaPoder | CartaAliado;
+
+export interface Captura {
+  readonly heroe: CartaHeroe;
+  readonly villanos: readonly [CartaVillano, CartaVillano];
+  readonly protecciones: readonly Proteccion[];
+}
 
 /** La carta de catálogo junto con su estado mutable durante la partida. */
 export class HeroeEnJuego {
@@ -58,9 +67,6 @@ export class HeroeEnJuego {
       ? poderCompatibleConHeroe(carta, this.heroe)
       : aliadoCompatibleConHeroe(carta, this.heroe);
     if (!compatible) throw new Error('La protección no es compatible con el héroe');
-    if (this.puntosProteccion + (carta instanceof CartaAliado ? 2 : 1) > 2) {
-      throw new Error('La protección excede el máximo del héroe');
-    }
     this.proteccionesInternas.push(carta);
   }
 
@@ -78,13 +84,28 @@ export class HeroeEnJuego {
     return null;
   }
 
-  combatirCon(poder: CartaPoder): CartaVillano {
+  combatirCon(carta: Combatiente): CartaVillano {
     if (!this.villanoInterno) throw new Error('El héroe no está bloqueado');
-    if (!poderCompatibleConHeroe(poder, this.heroe)) {
-      throw new Error('El poder no es compatible con el héroe');
+    const compatible = carta instanceof CartaPoder
+      ? poderCompatibleConVillano(carta, this.villanoInterno)
+      : aliadoCompatibleConVillano(carta, this.villanoInterno);
+    if (!compatible) {
+      throw new Error('La carta no es compatible con el villano');
     }
     const eliminado = this.villanoInterno;
     this.villanoInterno = null;
     return eliminado;
+  }
+
+  capturarCon(villano: CartaVillano): Captura {
+    if (!this.villanoInterno) throw new Error('Solo se captura un héroe bloqueado');
+    if (!villanoCompatibleConHeroe(villano, this.heroe)) {
+      throw new Error('El villano no es compatible con el héroe');
+    }
+    return {
+      heroe: this.heroe,
+      villanos: [this.villanoInterno, villano],
+      protecciones: this.protecciones,
+    };
   }
 }
