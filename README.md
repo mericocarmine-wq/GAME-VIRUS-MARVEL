@@ -16,3 +16,13 @@ Las reglas están contrastadas con el reglamento oficial de Virus! Marvel.
 
 La capa de aplicación incorpora partidas de 2 a 5 personas, reparto, manos,
 mazo, reciclaje del descarte y el ciclo completo de cada turno.
+
+## Persistencia local
+
+La configuración de PostgreSQL está en `prisma/schema.prisma`. Copia
+`.env.example` a `.env`, configura `DATABASE_URL` y ejecuta:
+
+```bash
+npm run prisma:generate
+npm run prisma:migrate
+```
