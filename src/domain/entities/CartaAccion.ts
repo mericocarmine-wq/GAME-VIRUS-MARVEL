@@ -1,5 +1,5 @@
+import type { IdAccion } from '../value-objects/TipoCarta';
 import { Carta } from './Carta';
-import { IdAccion } from '../value-objects/TipoCarta';
 
 /**
  * Carta de Acción. Deliberadamente NO contiene el efecto aquí

@@ -1,13 +1,13 @@
-import { Carta } from '../domain/entities/Carta';
-import { CartaAliado } from '../domain/entities/CartaAliado';
+import type { Carta } from '../domain/entities/Carta';
 import { CartaAccion } from '../domain/entities/CartaAccion';
+import { CartaAliado } from '../domain/entities/CartaAliado';
 import { CartaHeroe } from '../domain/entities/CartaHeroe';
 import { CartaPoder } from '../domain/entities/CartaPoder';
 import { CartaVillano } from '../domain/entities/CartaVillano';
 import { Jugador } from '../domain/entities/Jugador';
-import { Mazo } from '../domain/entities/Mazo';
+import type { Mazo } from '../domain/entities/Mazo';
 import { PilaDescarte } from '../domain/entities/PilaDescarte';
-import { crearRegistroAcciones, RegistroAcciones } from './acciones';
+import { crearRegistroAcciones, type RegistroAcciones } from './acciones';
 
 export class Partida {
   private indiceTurno = 0;
@@ -74,10 +74,9 @@ export class Partida {
   jugarAccion(jugadorId: string, cartaId: string, parametros: unknown): void {
     const jugador = this.validarTurno(jugadorId);
     const carta = this.cartaComo(jugador, cartaId, CartaAccion, 'Acción');
-    const descartes = this.acciones.obtener(carta.idAccion).ejecutar(
-      { actor: jugador, jugadores: this.jugadoresInternos },
-      parametros,
-    );
+    const descartes = this.acciones
+      .obtener(carta.idAccion)
+      .ejecutar({ actor: jugador, jugadores: this.jugadoresInternos }, parametros);
     jugador.retirarCarta(cartaId);
     this.descarte.agregar(carta, ...descartes);
     this.finalizarTurno(jugador);
@@ -113,11 +112,7 @@ export class Partida {
 
     if (heroe.estado === 'bloqueado') {
       const captura = objetivo.zona.capturarHeroe(heroeId, carta);
-      this.descarte.agregar(
-        captura.heroe,
-        ...captura.protecciones,
-        ...captura.villanos,
-      );
+      this.descarte.agregar(captura.heroe, ...captura.protecciones, ...captura.villanos);
     } else {
       const proteccionEliminada = heroe.bloquearCon(carta);
       if (proteccionEliminada) this.descarte.agregar(proteccionEliminada, carta);
@@ -146,7 +141,9 @@ export class Partida {
     if (new Set(cartaIds).size !== cartaIds.length) {
       throw new Error('No se puede descartar dos veces la misma carta');
     }
-    cartaIds.forEach((id) => jugador.obtenerCarta(id));
+    cartaIds.forEach((id) => {
+      jugador.obtenerCarta(id);
+    });
     this.descarte.agregar(...cartaIds.map((id) => jugador.retirarCarta(id)));
     this.finalizarTurno(jugador);
   }

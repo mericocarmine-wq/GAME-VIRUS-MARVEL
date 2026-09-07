@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { CartaHeroe } from '../CartaHeroe';
 
 describe('CartaHeroe', () => {
@@ -56,8 +56,6 @@ describe('CartaHeroe', () => {
   });
 
   it('rechaza héroe no multicolor sin color', () => {
-    expect(
-      () => new CartaHeroe({ id: 'x', nombre: 'Imposible', color: null }),
-    ).toThrow();
+    expect(() => new CartaHeroe({ id: 'x', nombre: 'Imposible', color: null })).toThrow();
   });
 });

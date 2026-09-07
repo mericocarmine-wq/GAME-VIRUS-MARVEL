@@ -1,5 +1,5 @@
+import type { ColorObjetivo } from '../value-objects/Color';
 import { Carta } from './Carta';
-import { ColorObjetivo } from '../value-objects/Color';
 
 /**
  * Carta de Villano. A diferencia de Poder, SÍ existe la variante

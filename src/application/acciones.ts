@@ -1,8 +1,11 @@
-import { Carta } from '../domain/entities/Carta';
-import { Jugador } from '../domain/entities/Jugador';
-import { IdAccion } from '../domain/value-objects/TipoCarta';
+import type { Carta } from '../domain/entities/Carta';
+import type { Jugador } from '../domain/entities/Jugador';
+import type { IdAccion } from '../domain/value-objects/TipoCarta';
 
-export interface ContextoAccion { actor: Jugador; jugadores: readonly Jugador[] }
+export interface ContextoAccion {
+  actor: Jugador;
+  jugadores: readonly Jugador[];
+}
 export interface IEfectoAccion {
   readonly id: IdAccion;
   ejecutar(contexto: ContextoAccion, parametros: unknown): readonly Carta[];
@@ -69,17 +72,23 @@ class Chasquido implements IEfectoAccion {
     const selecciones = objeto(objeto(parametros).heroesPorJugador);
     for (const actual of contexto.jugadores) this.validar(actual, selecciones[actual.id]);
     return contexto.jugadores.flatMap((actual) =>
-      (selecciones[actual.id] as string[]).flatMap((id) => actual.zona.retirarHeroe(id).cartasEnJuego),
+      (selecciones[actual.id] as string[]).flatMap(
+        (id) => actual.zona.retirarHeroe(id).cartasEnJuego,
+      ),
     );
   }
   private validar(jugadorActual: Jugador, seleccion: unknown): void {
-    if (!Array.isArray(seleccion) || !seleccion.every((id) => typeof id === 'string')) throw new Error(`Falta selección de ${jugadorActual.nombre}`);
-    if (seleccion.length !== Math.floor(jugadorActual.zona.heroes.length / 2)) throw new Error(`${jugadorActual.nombre} debe elegir la mitad de sus héroes`);
-    if (new Set(seleccion).size !== seleccion.length) throw new Error('Un héroe no puede elegirse dos veces');
-    seleccion.forEach((id) => { if (!jugadorActual.zona.buscarHeroe(id)) throw new Error(`No existe el héroe ${id}`); });
+    if (!Array.isArray(seleccion) || !seleccion.every((id) => typeof id === 'string'))
+      throw new Error(`Falta selección de ${jugadorActual.nombre}`);
+    if (seleccion.length !== Math.floor(jugadorActual.zona.heroes.length / 2))
+      throw new Error(`${jugadorActual.nombre} debe elegir la mitad de sus héroes`);
+    if (new Set(seleccion).size !== seleccion.length)
+      throw new Error('Un héroe no puede elegirse dos veces');
+    seleccion.forEach((id) => {
+      if (!jugadorActual.zona.buscarHeroe(id)) throw new Error(`No existe el héroe ${id}`);
+    });
   }
 }
 
-export const crearRegistroAcciones = (): RegistroAcciones => new RegistroAcciones([
-  new Reclutar(), new AlterarRealidad(), new Chasquido(),
-]);
+export const crearRegistroAcciones = (): RegistroAcciones =>
+  new RegistroAcciones([new Reclutar(), new AlterarRealidad(), new Chasquido()]);

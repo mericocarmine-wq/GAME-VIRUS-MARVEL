@@ -1,14 +1,11 @@
-import { Carta } from './Carta';
-import { BarajadorAleatorio, IBarajador } from '../services/IBarajador';
+import { BarajadorAleatorio, type IBarajador } from '../services/IBarajador';
+import type { Carta } from './Carta';
 
 export class Mazo {
   private cartasInternas: Carta[];
   private readonly barajador: IBarajador;
 
-  constructor(
-    cartas: readonly Carta[],
-    barajador: IBarajador = new BarajadorAleatorio(),
-  ) {
+  constructor(cartas: readonly Carta[], barajador: IBarajador = new BarajadorAleatorio()) {
     this.validarIdsUnicos(cartas);
     this.barajador = barajador;
     this.cartasInternas = this.barajador.barajar(cartas);

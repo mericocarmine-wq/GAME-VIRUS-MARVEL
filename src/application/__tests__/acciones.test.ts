@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { crearRegistroAcciones } from '../acciones';
 import { CartaHeroe } from '../../domain/entities/CartaHeroe';
 import { CartaPoder } from '../../domain/entities/CartaPoder';
 import { Jugador } from '../../domain/entities/Jugador';
+import { crearRegistroAcciones } from '../acciones';
 
 const heroe = (id: string, color: 'rojo' | 'amarillo' | 'verde' | 'azul') =>
   new CartaHeroe({ id, nombre: id, color });
@@ -15,7 +15,8 @@ describe('acciones especiales', () => {
     const bob = new Jugador({ id: 'bob', nombre: 'Bob' });
     bob.zona.agregarHeroe(heroe('h1', 'rojo'));
     crearRegistroAcciones().obtener('reclutar').ejecutar(contexto(ana, bob), {
-      jugadorOrigenId: 'bob', heroeId: 'h1',
+      jugadorOrigenId: 'bob',
+      heroeId: 'h1',
     });
     expect(ana.zona.buscarHeroe('h1')).toBeDefined();
     expect(bob.zona.buscarHeroe('h1')).toBeUndefined();
@@ -27,9 +28,12 @@ describe('acciones especiales', () => {
     const objetivo = bob.zona.agregarHeroe(heroe('h1', 'rojo'));
     objetivo.protegerCon(poder('p1'));
     objetivo.protegerCon(poder('p2'));
-    expect(() => crearRegistroAcciones().obtener('reclutar').ejecutar(contexto(ana, bob), {
-      jugadorOrigenId: 'bob', heroeId: 'h1',
-    })).toThrow('blindado');
+    expect(() =>
+      crearRegistroAcciones().obtener('reclutar').ejecutar(contexto(ana, bob), {
+        jugadorOrigenId: 'bob',
+        heroeId: 'h1',
+      }),
+    ).toThrow('blindado');
   });
 
   it('Alterar la realidad intercambia equipos completos', () => {
@@ -37,7 +41,9 @@ describe('acciones especiales', () => {
     const bob = new Jugador({ id: 'bob', nombre: 'Bob' });
     ana.zona.agregarHeroe(heroe('a', 'rojo'));
     bob.zona.agregarHeroe(heroe('b', 'azul'));
-    crearRegistroAcciones().obtener('alterar-realidad').ejecutar(contexto(ana, bob), { jugadorObjetivoId: 'bob' });
+    crearRegistroAcciones()
+      .obtener('alterar-realidad')
+      .ejecutar(contexto(ana, bob), { jugadorObjetivoId: 'bob' });
     expect(ana.zona.buscarHeroe('b')).toBeDefined();
     expect(bob.zona.buscarHeroe('a')).toBeDefined();
   });
@@ -52,9 +58,11 @@ describe('acciones especiales', () => {
     ana.zona.agregarHeroe(heroe('a3', 'verde'));
     bob.zona.agregarHeroe(heroe('b1', 'amarillo'));
     bob.zona.agregarHeroe(heroe('b2', 'rojo'));
-    const descartes = crearRegistroAcciones().obtener('chasquido').ejecutar(contexto(ana, bob), {
-      heroesPorJugador: { ana: ['a1'], bob: ['b1'] },
-    });
+    const descartes = crearRegistroAcciones()
+      .obtener('chasquido')
+      .ejecutar(contexto(ana, bob), {
+        heroesPorJugador: { ana: ['a1'], bob: ['b1'] },
+      });
     expect(ana.zona.heroes).toHaveLength(2);
     expect(bob.zona.heroes).toHaveLength(1);
     expect(descartes.map(({ id }) => id)).toEqual(expect.arrayContaining(['a1', 'p1', 'p2', 'b1']));

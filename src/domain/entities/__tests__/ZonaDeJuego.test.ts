@@ -7,7 +7,9 @@ describe('ZonaDeJuego', () => {
   it('no permite colores fijos repetidos', () => {
     const zona = new ZonaDeJuego();
     zona.agregarHeroe(new CartaHeroe({ id: 'h1', nombre: 'Rojo', color: 'rojo' }));
-    expect(() => zona.agregarHeroe(new CartaHeroe({ id: 'h2', nombre: 'Otro rojo', color: 'rojo' }))).toThrow();
+    expect(() =>
+      zona.agregarHeroe(new CartaHeroe({ id: 'h2', nombre: 'Otro rojo', color: 'rojo' })),
+    ).toThrow();
   });
 
   it('permite hasta seis héroes distintos con multicolor e intangible', () => {
@@ -15,8 +17,12 @@ describe('ZonaDeJuego', () => {
     (['rojo', 'amarillo', 'verde', 'azul'] as const).forEach((color, i) => {
       zona.agregarHeroe(new CartaHeroe({ id: `h${i}`, nombre: color, color }));
     });
-    zona.agregarHeroe(new CartaHeroe({ id: 'multi', nombre: 'Capitana Marvel', color: null, esMulticolor: true }));
-    zona.agregarHeroe(new CartaHeroe({ id: 'intangible', nombre: 'Visión', color: null, esIntangible: true }));
+    zona.agregarHeroe(
+      new CartaHeroe({ id: 'multi', nombre: 'Capitana Marvel', color: null, esMulticolor: true }),
+    );
+    zona.agregarHeroe(
+      new CartaHeroe({ id: 'intangible', nombre: 'Visión', color: null, esIntangible: true }),
+    );
     expect(zona.heroes).toHaveLength(6);
     expect(zona.haGanado()).toBe(true);
   });
@@ -43,7 +49,10 @@ describe('ZonaDeJuego', () => {
     const zona = new ZonaDeJuego();
     const actual = zona.agregarHeroe(new CartaHeroe({ id: 'h1', nombre: 'Rojo', color: 'rojo' }));
     actual.bloquearCon(new CartaVillano({ id: 'v1', nombre: 'Uno', colorObjetivo: 'rojo' }));
-    const captura = zona.capturarHeroe('h1', new CartaVillano({ id: 'v2', nombre: 'Dos', colorObjetivo: 'rojo' }));
+    const captura = zona.capturarHeroe(
+      'h1',
+      new CartaVillano({ id: 'v2', nombre: 'Dos', colorObjetivo: 'rojo' }),
+    );
     expect(captura.villanos).toHaveLength(2);
     expect(zona.heroes).toHaveLength(0);
   });

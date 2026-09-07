@@ -1,7 +1,7 @@
-import { CartaHeroe } from './CartaHeroe';
-import { Captura, HeroeEnJuego } from './HeroeEnJuego';
-import { CartaVillano } from './CartaVillano';
-import { Color } from '../value-objects/Color';
+import type { Color } from '../value-objects/Color';
+import type { CartaHeroe } from './CartaHeroe';
+import type { CartaVillano } from './CartaVillano';
+import { type Captura, HeroeEnJuego } from './HeroeEnJuego';
 
 export class ZonaDeJuego {
   static readonly MAX_HEROES = 6;
@@ -44,10 +44,16 @@ export class ZonaDeJuego {
     if (heroe.color !== null && this.coloresFijos().has(heroe.color)) {
       throw new Error(`Ya hay un héroe de color ${heroe.color}`);
     }
-    if (heroe.esMulticolor && this.heroesInternos.some(({ heroe: actual }) => actual.esMulticolor)) {
+    if (
+      heroe.esMulticolor &&
+      this.heroesInternos.some(({ heroe: actual }) => actual.esMulticolor)
+    ) {
       throw new Error('Ya hay un héroe multicolor');
     }
-    if (heroe.esIntangible && this.heroesInternos.some(({ heroe: actual }) => actual.esIntangible)) {
+    if (
+      heroe.esIntangible &&
+      this.heroesInternos.some(({ heroe: actual }) => actual.esIntangible)
+    ) {
       throw new Error('Ya hay un héroe intangible');
     }
   }

@@ -1,4 +1,4 @@
-import { Partida } from './Partida';
+import type { Partida } from './Partida';
 
 /** Estrategia mínima y determinista para desarrollo local. */
 export function ejecutarTurnoMaquina(partida: Partida, jugadorId: string): void {

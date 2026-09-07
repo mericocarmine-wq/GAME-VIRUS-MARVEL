@@ -1,8 +1,3 @@
-import { CartaAliado } from './CartaAliado';
-import { Carta } from './Carta';
-import { CartaHeroe } from './CartaHeroe';
-import { CartaPoder } from './CartaPoder';
-import { CartaVillano } from './CartaVillano';
 import {
   aliadoCompatibleConHeroe,
   aliadoCompatibleConVillano,
@@ -10,7 +5,12 @@ import {
   poderCompatibleConVillano,
   villanoCompatibleConHeroe,
 } from '../rules/ColorMatch';
-import { EstadoHeroe, esEstadoPreparado } from '../value-objects/EstadoHeroe';
+import { type EstadoHeroe, esEstadoPreparado } from '../value-objects/EstadoHeroe';
+import type { Carta } from './Carta';
+import { CartaAliado } from './CartaAliado';
+import type { CartaHeroe } from './CartaHeroe';
+import { CartaPoder } from './CartaPoder';
+import type { CartaVillano } from './CartaVillano';
 
 export type Proteccion = CartaPoder | CartaAliado;
 export type Combatiente = CartaPoder | CartaAliado;
@@ -58,7 +58,11 @@ export class HeroeEnJuego {
   }
 
   get cartasEnJuego(): readonly Carta[] {
-    return [this.heroe, ...this.proteccionesInternas, ...(this.villanoInterno ? [this.villanoInterno] : [])];
+    return [
+      this.heroe,
+      ...this.proteccionesInternas,
+      ...(this.villanoInterno ? [this.villanoInterno] : []),
+    ];
   }
 
   protegerCon(carta: Proteccion): void {
@@ -68,9 +72,10 @@ export class HeroeEnJuego {
     if (this.estado === 'blindado') {
       throw new Error('Un héroe blindado no admite más protección');
     }
-    const compatible = carta instanceof CartaPoder
-      ? poderCompatibleConHeroe(carta, this.heroe)
-      : aliadoCompatibleConHeroe(carta, this.heroe);
+    const compatible =
+      carta instanceof CartaPoder
+        ? poderCompatibleConHeroe(carta, this.heroe)
+        : aliadoCompatibleConHeroe(carta, this.heroe);
     if (!compatible) throw new Error('La protección no es compatible con el héroe');
     this.proteccionesInternas.push(carta);
   }
@@ -91,9 +96,10 @@ export class HeroeEnJuego {
 
   combatirCon(carta: Combatiente): CartaVillano {
     if (!this.villanoInterno) throw new Error('El héroe no está bloqueado');
-    const compatible = carta instanceof CartaPoder
-      ? poderCompatibleConVillano(carta, this.villanoInterno)
-      : aliadoCompatibleConVillano(carta, this.villanoInterno);
+    const compatible =
+      carta instanceof CartaPoder
+        ? poderCompatibleConVillano(carta, this.villanoInterno)
+        : aliadoCompatibleConVillano(carta, this.villanoInterno);
     if (!compatible) {
       throw new Error('La carta no es compatible con el villano');
     }

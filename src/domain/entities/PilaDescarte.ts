@@ -1,4 +1,4 @@
-import { Carta } from './Carta';
+import type { Carta } from './Carta';
 
 export class PilaDescarte {
   private cartasInternas: Carta[] = [];

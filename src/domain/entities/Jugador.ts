@@ -1,4 +1,4 @@
-import { Carta } from './Carta';
+import type { Carta } from './Carta';
 import { ZonaDeJuego } from './ZonaDeJuego';
 
 export class Jugador {

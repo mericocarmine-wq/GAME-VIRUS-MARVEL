@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { IBarajador } from '../../services/IBarajador';
 import { CartaPoder } from '../CartaPoder';
 import { Mazo } from '../Mazo';
-import { IBarajador } from '../../services/IBarajador';
 
 class SinBarajar implements IBarajador {
   barajar<T>(elementos: readonly T[]): T[] {

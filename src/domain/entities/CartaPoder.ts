@@ -1,5 +1,5 @@
+import type { Color } from '../value-objects/Color';
 import { Carta } from './Carta';
-import { Color } from '../value-objects/Color';
 
 /**
  * Carta de Poder. Siempre tiene un color fijo (no existe Poder

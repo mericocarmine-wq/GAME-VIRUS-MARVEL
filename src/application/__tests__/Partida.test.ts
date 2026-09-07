@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { Partida } from '../Partida';
-import { Carta } from '../../domain/entities/Carta';
+import type { Carta } from '../../domain/entities/Carta';
 import { CartaHeroe } from '../../domain/entities/CartaHeroe';
 import { CartaPoder } from '../../domain/entities/CartaPoder';
 import { CartaVillano } from '../../domain/entities/CartaVillano';
 import { Jugador } from '../../domain/entities/Jugador';
 import { Mazo } from '../../domain/entities/Mazo';
-import { IBarajador } from '../../domain/services/IBarajador';
+import type { IBarajador } from '../../domain/services/IBarajador';
+import { Partida } from '../Partida';
 
 class SinBarajar implements IBarajador {
   barajar<T>(elementos: readonly T[]): T[] {
@@ -47,10 +47,11 @@ describe('Partida', () => {
   });
 
   it('recicla el descarte cuando se agota el mazo', () => {
-    const { partida, ana } = crearPartida(
-      Array.from({ length: 6 }, (_, i) => poder(`p${i}`)),
+    const { partida, ana } = crearPartida(Array.from({ length: 6 }, (_, i) => poder(`p${i}`)));
+    partida.descartar(
+      ana.id,
+      ana.mano.slice(0, 2).map(({ id }) => id),
     );
-    partida.descartar(ana.id, ana.mano.slice(0, 2).map(({ id }) => id));
     expect(ana.mano).toHaveLength(3);
     expect(partida.descarte.cantidad).toBe(0);
   });

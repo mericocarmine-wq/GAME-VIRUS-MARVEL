@@ -16,7 +16,9 @@ describe('Jugador', () => {
 
   it('no permite más de tres cartas', () => {
     const jugador = new Jugador({ id: 'j1', nombre: 'Ana' });
-    ['1', '2', '3'].forEach((id) => jugador.recibir(carta(id)));
+    ['1', '2', '3'].forEach((id) => {
+      jugador.recibir(carta(id));
+    });
     expect(() => jugador.recibir(carta('4'))).toThrow('tres cartas');
   });
 });

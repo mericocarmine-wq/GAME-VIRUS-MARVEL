@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { CartaHeroe } from '../CartaHeroe';
 import { CartaAliado } from '../CartaAliado';
+import { CartaHeroe } from '../CartaHeroe';
 import { CartaPoder } from '../CartaPoder';
 import { CartaVillano } from '../CartaVillano';
 import { HeroeEnJuego } from '../HeroeEnJuego';
 
-const heroe = () => new HeroeEnJuego(new CartaHeroe({ id: 'h1', nombre: 'Iron Man', color: 'rojo' }));
+const heroe = () =>
+  new HeroeEnJuego(new CartaHeroe({ id: 'h1', nombre: 'Iron Man', color: 'rojo' }));
 const poder = (id: string) => new CartaPoder({ id, nombre: 'Poder rojo', color: 'rojo' });
 const villano = () => new CartaVillano({ id: 'v1', nombre: 'Villano rojo', colorObjetivo: 'rojo' });
 

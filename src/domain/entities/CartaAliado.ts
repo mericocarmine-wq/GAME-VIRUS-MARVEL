@@ -1,5 +1,5 @@
+import type { Color } from '../value-objects/Color';
 import { Carta } from './Carta';
-import { Color } from '../value-objects/Color';
 
 /**
  * Carta de Aliado. Equivale a 2 cartas de Poder y cubre exactamente

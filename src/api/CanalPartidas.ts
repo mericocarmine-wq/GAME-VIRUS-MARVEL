@@ -1,4 +1,4 @@
-import { Partida } from '../application/Partida';
+import type { Partida } from '../application/Partida';
 
 export interface ConexionPartida {
   usuarioId: string;
@@ -18,9 +18,18 @@ export class CanalPartidas {
     };
   }
 
-  publicar(partidaId: string, partida: Partida, serializar: (partida: Partida, usuarioId: string) => unknown): void {
+  publicar(
+    partidaId: string,
+    partida: Partida,
+    serializar: (partida: Partida, usuarioId: string) => unknown,
+  ): void {
     for (const conexion of this.conexiones.get(partidaId) ?? []) {
-      conexion.enviar(JSON.stringify({ tipo: 'partida.actualizada', partida: serializar(partida, conexion.usuarioId) }));
+      conexion.enviar(
+        JSON.stringify({
+          tipo: 'partida.actualizada',
+          partida: serializar(partida, conexion.usuarioId),
+        }),
+      );
     }
   }
 }

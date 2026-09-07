@@ -1,5 +1,5 @@
+import type { Color } from '../value-objects/Color';
 import { Carta } from './Carta';
-import { Color } from '../value-objects/Color';
 
 /**
  * Carta de Héroe. Es multicolor XOR intangible XOR "normal"
@@ -32,19 +32,13 @@ export class CartaHeroe extends Carta {
     const esIntangible = params.esIntangible ?? false;
 
     if (esMulticolor && esIntangible) {
-      throw new Error(
-        `Héroe "${params.nombre}": no puede ser multicolor e intangible a la vez`,
-      );
+      throw new Error(`Héroe "${params.nombre}": no puede ser multicolor e intangible a la vez`);
     }
     if ((esMulticolor || esIntangible) && params.color !== null) {
-      throw new Error(
-        `Héroe "${params.nombre}": un héroe especial no debe tener color fijo`,
-      );
+      throw new Error(`Héroe "${params.nombre}": un héroe especial no debe tener color fijo`);
     }
     if (!esMulticolor && !esIntangible && params.color === null) {
-      throw new Error(
-        `Héroe "${params.nombre}": un héroe no multicolor requiere color`,
-      );
+      throw new Error(`Héroe "${params.nombre}": un héroe no multicolor requiere color`);
     }
 
     this.color = params.color;

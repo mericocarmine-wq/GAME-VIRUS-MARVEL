@@ -1,4 +1,4 @@
-import { TipoCarta } from '../value-objects/TipoCarta';
+import type { TipoCarta } from '../value-objects/TipoCarta';
 
 /**
  * Identidad mínima compartida por toda carta del mazo.
