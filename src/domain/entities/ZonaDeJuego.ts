@@ -1,91 +1,55 @@
-import type { Color } from '../value-objects/Color';
-import type { CartaHeroe } from './CartaHeroe';
-import type { CartaVillano } from './CartaVillano';
-import { type Captura, HeroeEnJuego } from './HeroeEnJuego';
+import { HeroeEnJuego } from './HeroeEnJuego';
+import { CartaHeroe } from './CartaHeroe';
+import { esEstadoPreparado } from '../value-objects/EstadoHeroe';
 
+/**
+ * Zona de juego de UN jugador: su equipo de Héroes en mesa.
+ * Responsable únicamente de: añadir héroes, listar el equipo,
+ * y determinar la condición de victoria. NO conoce el mazo, la mano
+ * ni el turno — eso pertenece a la capa de aplicación (Fase 3).
+ */
 export class ZonaDeJuego {
-  static readonly MAX_HEROES = 6;
-  private readonly heroesInternos: HeroeEnJuego[] = [];
+  private heroes: HeroeEnJuego[] = [];
 
-  get heroes(): readonly HeroeEnJuego[] {
-    return [...this.heroesInternos];
-  }
+  /** Máximo del reglamento: 6 si hay multicolor + intangible en equipo. */
+  private static readonly MAX_HEROES = 6;
 
-  agregarHeroe(heroe: CartaHeroe): HeroeEnJuego {
-    this.validarNuevoHeroe(heroe);
-    const enJuego = new HeroeEnJuego(heroe);
-    this.heroesInternos.push(enJuego);
-    return enJuego;
-  }
-
-  transferirHeroeDesde(origen: ZonaDeJuego, id: string): HeroeEnJuego {
-    if (origen === this) throw new Error('El origen y destino deben ser distintos');
-    const heroe = origen.buscarHeroe(id);
-    if (!heroe) throw new Error(`No existe el héroe ${id}`);
-    this.validarNuevoHeroe(heroe.heroe);
-    origen.retirarHeroe(id);
-    this.heroesInternos.push(heroe);
-    return heroe;
-  }
-
-  intercambiarCon(otra: ZonaDeJuego): void {
-    if (otra === this) throw new Error('Las zonas deben ser distintas');
-    const propios = this.heroesInternos.splice(0);
-    const ajenos = otra.heroesInternos.splice(0);
-    this.heroesInternos.push(...ajenos);
-    otra.heroesInternos.push(...propios);
-  }
-
-  private validarNuevoHeroe(heroe: CartaHeroe): void {
-    if (this.heroesInternos.length >= ZonaDeJuego.MAX_HEROES) {
-      throw new Error('La zona de juego ya tiene seis héroes');
+  agregarHeroe(heroe: HeroeEnJuego): void {
+    if (this.heroes.length >= ZonaDeJuego.MAX_HEROES) {
+      throw new Error(`No se pueden tener más de ${ZonaDeJuego.MAX_HEROES} Héroes en equipo`);
     }
-    if (this.buscarHeroe(heroe.id)) throw new Error(`Ya existe la carta ${heroe.id}`);
-    if (heroe.color !== null && this.coloresFijos().has(heroe.color)) {
-      throw new Error(`Ya hay un héroe de color ${heroe.color}`);
+    if (!heroe.carta.esMulticolor) {
+      const colorYaEnEquipo = this.heroes.some(
+        (h) => !h.carta.esMulticolor && h.colorEfectivo() === heroe.colorEfectivo(),
+      );
+      if (colorYaEnEquipo) {
+        throw new Error('No puedes tener dos Héroes del mismo color en tu equipo');
+      }
     }
-    if (
-      heroe.esMulticolor &&
-      this.heroesInternos.some(({ heroe: actual }) => actual.esMulticolor)
-    ) {
-      throw new Error('Ya hay un héroe multicolor');
-    }
-    if (
-      heroe.esIntangible &&
-      this.heroesInternos.some(({ heroe: actual }) => actual.esIntangible)
-    ) {
-      throw new Error('Ya hay un héroe intangible');
-    }
+    this.heroes.push(heroe);
   }
 
-  buscarHeroe(id: string): HeroeEnJuego | undefined {
-    return this.heroesInternos.find(({ heroe }) => heroe.id === id);
+  eliminarHeroe(carta: CartaHeroe): void {
+    this.heroes = this.heroes.filter((h) => h.carta.id !== carta.id);
   }
 
-  retirarHeroe(id: string): HeroeEnJuego {
-    const indice = this.heroesInternos.findIndex(({ heroe }) => heroe.id === id);
-    if (indice < 0) throw new Error(`No existe el héroe ${id}`);
-    return this.heroesInternos.splice(indice, 1)[0];
+  listarHeroes(): readonly HeroeEnJuego[] {
+    return this.heroes;
   }
 
-  capturarHeroe(id: string, villano: CartaVillano): Captura {
-    const actual = this.buscarHeroe(id);
-    if (!actual) throw new Error(`No existe el héroe ${id}`);
-    const captura = actual.capturarCon(villano);
-    this.retirarHeroe(id);
-    return captura;
-  }
-
-  /** Gana quien reúne cuatro héroes preparados que pueden representar colores distintos. */
+  /**
+   * Condición de victoria: 4 Héroes preparados de colores efectivos
+   * distintos. Un multicolor cuenta por el color que eligió al jugarse
+   * (regla confirmada: se fija una vez y no cambia).
+   */
   haGanado(): boolean {
-    return this.heroesInternos.filter((heroe) => heroe.estaPreparado).length >= 4;
+    const coloresPreparados = new Set(
+      this.heroes.filter((h) => esEstadoPreparado(h.estado())).map((h) => h.colorEfectivo()),
+    );
+    return coloresPreparados.size >= 4;
   }
 
-  private coloresFijos(): Set<Color> {
-    return new Set(
-      this.heroesInternos
-        .map(({ heroe }) => heroe.color)
-        .filter((color): color is Color => color !== null),
-    );
+  contarPreparados(): number {
+    return this.heroes.filter((h) => esEstadoPreparado(h.estado())).length;
   }
 }

@@ -1,122 +1,184 @@
-import {
-  aliadoCompatibleConHeroe,
-  aliadoCompatibleConVillano,
-  poderCompatibleConHeroe,
-  poderCompatibleConVillano,
-  villanoCompatibleConHeroe,
-} from '../rules/ColorMatch';
-import { type EstadoHeroe, esEstadoPreparado } from '../value-objects/EstadoHeroe';
-import type { Carta } from './Carta';
-import { CartaAliado } from './CartaAliado';
-import type { CartaHeroe } from './CartaHeroe';
+import { CartaHeroe } from './CartaHeroe';
 import { CartaPoder } from './CartaPoder';
-import type { CartaVillano } from './CartaVillano';
+import { CartaVillano } from './CartaVillano';
+import { CartaAliado } from './CartaAliado';
+import { Color, esColorValido } from '../value-objects/Color';
+import { EstadoHeroe } from '../value-objects/EstadoHeroe';
+import { villanoCoincideConColor, aliadoCoincideConColor } from '../rules/ColorMatch';
 
-export type Proteccion = CartaPoder | CartaAliado;
-export type Combatiente = CartaPoder | CartaAliado;
-
-export interface Captura {
-  readonly heroe: CartaHeroe;
-  readonly villanos: readonly [CartaVillano, CartaVillano];
-  readonly protecciones: readonly Proteccion[];
-}
-
-/** La carta de catálogo junto con su estado mutable durante la partida. */
+/**
+ * Representa un Héroe YA jugado en la mesa de un jugador, con todo
+ * lo que tiene apilado encima. Esta es la pieza que en Fase 1 dejamos
+ * pendiente a propósito: CartaHeroe es "qué es la carta", HeroeEnJuego
+ * es "qué le está pasando ahora en la partida".
+ *
+ * Invariante de color para multicolor (Capitana Marvel): el color se
+ * elige UNA vez, al jugar la carta, y no puede cambiar después. Por
+ * eso `colorElegido` se recibe en el constructor y no hay ningún
+ * método para modificarlo más tarde.
+ */
 export class HeroeEnJuego {
-  readonly heroe: CartaHeroe;
-  private proteccionesInternas: Proteccion[] = [];
-  private villanoInterno: CartaVillano | null = null;
+  readonly carta: CartaHeroe;
+  private readonly colorElegido: Color | null;
 
-  constructor(heroe: CartaHeroe) {
-    this.heroe = heroe;
+  /** 0, 1 o 2 cartas de protección (Poder o Aliado) apiladas. */
+  private protecciones: Array<CartaPoder | CartaAliado> = [];
+  /** Solo presente si un Aliado blindó directamente (salta el paso intermedio). */
+  private blindadoPorAliado = false;
+  /** Presente únicamente si el héroe está bloqueado. */
+  private villanoQueBloquea: CartaVillano | null = null;
+
+  constructor(carta: CartaHeroe, colorElegido?: Color) {
+    if (carta.esMulticolor) {
+      if (!colorElegido || !esColorValido(colorElegido)) {
+        throw new Error(
+          `Héroe multicolor "${carta.nombre}" requiere un color elegido válido al jugarlo`,
+        );
+      }
+    } else if (colorElegido) {
+      throw new Error(
+        `Héroe "${carta.nombre}" no es multicolor: no se le puede asignar un color elegido`,
+      );
+    }
+    this.carta = carta;
+    this.colorElegido = carta.esMulticolor ? colorElegido! : null;
   }
 
-  get protecciones(): readonly Proteccion[] {
-    return [...this.proteccionesInternas];
+  /** Color real a efectos de reglas y de recuento de victoria. */
+  colorEfectivo(): Color {
+    return this.carta.esMulticolor ? this.colorElegido! : this.carta.color!;
   }
 
-  get villano(): CartaVillano | null {
-    return this.villanoInterno;
-  }
-
-  get puntosProteccion(): number {
-    return this.proteccionesInternas.reduce(
-      (total, carta) => total + (carta instanceof CartaAliado ? 2 : 1),
-      0,
-    );
-  }
-
-  get estado(): EstadoHeroe {
-    if (this.villanoInterno) return 'bloqueado';
-    if (this.puntosProteccion >= 2) return 'blindado';
-    if (this.puntosProteccion === 1) return 'protegido';
+  estado(): EstadoHeroe {
+    if (this.blindadoPorAliado || this.protecciones.length >= 2) return 'blindado';
+    if (this.villanoQueBloquea) return 'bloqueado';
+    if (this.protecciones.length === 1) return 'protegido';
     return 'libre';
   }
 
-  get estaPreparado(): boolean {
-    return esEstadoPreparado(this.estado);
+  esInmune(): boolean {
+    return this.estado() === 'blindado';
   }
 
-  get cartasEnJuego(): readonly Carta[] {
-    return [
-      this.heroe,
-      ...this.proteccionesInternas,
-      ...(this.villanoInterno ? [this.villanoInterno] : []),
-    ];
+  // ---- Transiciones que inician los VILLANOS ----
+
+  /** Bloquear: Villano sobre Héroe libre del mismo color (o multicolor). */
+  bloquear(villano: CartaVillano): void {
+    if (this.estado() !== 'libre') {
+      throw new Error('Solo se puede bloquear un Héroe que esté libre');
+    }
+    if (!villanoCoincideConColor(villano, this.colorEfectivo())) {
+      throw new Error('El Villano no coincide en color con el Héroe');
+    }
+    this.villanoQueBloquea = villano;
   }
 
-  protegerCon(carta: Proteccion): void {
-    if (this.villanoInterno) {
-      throw new Error('Un héroe bloqueado debe ser liberado antes de protegerlo');
+  /** Debilitar: el Villano elimina la única carta de Poder que protege (no aplica si blindado). */
+  debilitar(villano: CartaVillano): CartaPoder {
+    if (this.estado() !== 'protegido') {
+      throw new Error('Solo se puede debilitar un Héroe protegido (no libre, bloqueado ni blindado)');
     }
-    if (this.estado === 'blindado') {
-      throw new Error('Un héroe blindado no admite más protección');
+    const proteccion = this.protecciones[0];
+    if (!(proteccion instanceof CartaPoder)) {
+      throw new Error('La protección actual no es una carta de Poder debilitable');
     }
-    const compatible =
-      carta instanceof CartaPoder
-        ? poderCompatibleConHeroe(carta, this.heroe)
-        : aliadoCompatibleConHeroe(carta, this.heroe);
-    if (!compatible) throw new Error('La protección no es compatible con el héroe');
-    this.proteccionesInternas.push(carta);
+    if (proteccion.color !== villano.colorObjetivo && villano.colorObjetivo !== 'cualquiera') {
+      throw new Error('El Villano no coincide en color con el Poder a debilitar');
+    }
+    this.protecciones = [];
+    return proteccion;
   }
 
-  bloquearCon(villano: CartaVillano): Proteccion | null {
-    if (this.estado === 'blindado') throw new Error('Un héroe blindado es inmune');
-    if (this.villanoInterno) throw new Error('El héroe ya está bloqueado');
-    if (!villanoCompatibleConHeroe(villano, this.heroe)) {
-      throw new Error('El villano no es compatible con el héroe');
+  /**
+   * Capturar: un segundo Villano sobre un Héroe ya bloqueado.
+   * Devuelve las cartas a enviar a descarte; quien llama (ZonaDeJuego)
+   * es responsable de eliminar este Héroe de la mesa.
+   */
+  capturar(segundoVillano: CartaVillano): { heroe: CartaHeroe; villanos: [CartaVillano, CartaVillano] } {
+    if (this.estado() !== 'bloqueado' || !this.villanoQueBloquea) {
+      throw new Error('Solo se puede capturar un Héroe ya bloqueado');
     }
-    // Atacar a un héroe protegido destruye la protección y el villano se descarta.
-    if (this.proteccionesInternas.length > 0) {
-      return this.proteccionesInternas.pop() ?? null;
+    if (!villanoCoincideConColor(segundoVillano, this.colorEfectivo())) {
+      throw new Error('El segundo Villano no coincide en color con el Héroe bloqueado');
     }
-    this.villanoInterno = villano;
-    return null;
+    const primerVillano = this.villanoQueBloquea;
+    return { heroe: this.carta, villanos: [primerVillano, segundoVillano] };
   }
 
-  combatirCon(carta: Combatiente): CartaVillano {
-    if (!this.villanoInterno) throw new Error('El héroe no está bloqueado');
-    const compatible =
-      carta instanceof CartaPoder
-        ? poderCompatibleConVillano(carta, this.villanoInterno)
-        : aliadoCompatibleConVillano(carta, this.villanoInterno);
-    if (!compatible) {
-      throw new Error('La carta no es compatible con el villano');
+  // ---- Transiciones que inician los PODERES ----
+
+  /** Proteger: Poder sobre Héroe libre del mismo color. */
+  proteger(poder: CartaPoder): void {
+    if (this.estado() !== 'libre') {
+      throw new Error('Solo se puede proteger un Héroe que esté libre');
     }
-    const eliminado = this.villanoInterno;
-    this.villanoInterno = null;
-    return eliminado;
+    if (poder.color !== this.colorEfectivo()) {
+      throw new Error('El Poder no coincide en color con el Héroe');
+    }
+    this.protecciones.push(poder);
   }
 
-  capturarCon(villano: CartaVillano): Captura {
-    if (!this.villanoInterno) throw new Error('Solo se captura un héroe bloqueado');
-    if (!villanoCompatibleConHeroe(villano, this.heroe)) {
-      throw new Error('El villano no es compatible con el héroe');
+  /** Combatir: Poder que descarta el Villano que bloquea. */
+  combatir(poder: CartaPoder): CartaVillano {
+    if (this.estado() !== 'bloqueado' || !this.villanoQueBloquea) {
+      throw new Error('Solo se puede combatir un Héroe bloqueado');
     }
-    return {
-      heroe: this.heroe,
-      villanos: [this.villanoInterno, villano],
-      protecciones: this.protecciones,
-    };
+    if (poder.color !== this.colorEfectivo()) {
+      throw new Error('El Poder no coincide en color con el Héroe bloqueado');
+    }
+    const villano = this.villanoQueBloquea;
+    this.villanoQueBloquea = null;
+    return villano;
+  }
+
+  /** Blindar con 2ª carta de Poder: solo si ya está protegido. */
+  blindarConSegundoPoder(poder: CartaPoder): void {
+    if (this.estado() !== 'protegido') {
+      throw new Error('Solo se puede blindar con 2º Poder un Héroe ya protegido');
+    }
+    if (poder.color !== this.colorEfectivo()) {
+      throw new Error('El Poder no coincide en color con el Héroe');
+    }
+    this.protecciones.push(poder);
+  }
+
+  // ---- Transiciones que inician los ALIADOS ----
+
+  /** Atacar con Aliado: equivale a Combatir, pero con color entre los 2 del Aliado. */
+  atacarConAliado(aliado: CartaAliado): CartaVillano {
+    if (this.estado() !== 'bloqueado' || !this.villanoQueBloquea) {
+      throw new Error('Solo se puede atacar con Aliado un Héroe bloqueado');
+    }
+    if (!aliadoCoincideConColor(aliado, this.colorEfectivo())) {
+      throw new Error('El Aliado no cubre el color del Héroe bloqueado');
+    }
+    const villano = this.villanoQueBloquea;
+    this.villanoQueBloquea = null;
+    return villano;
+  }
+
+  /** Blindar con Aliado: directo, sobre Héroe libre o protegido, nunca intangible. */
+  blindarConAliado(aliado: CartaAliado): void {
+    if (this.carta.esIntangible) {
+      throw new Error('Un Aliado no puede jugarse sobre un Héroe intangible');
+    }
+    const estadoActual = this.estado();
+    if (estadoActual !== 'libre' && estadoActual !== 'protegido') {
+      throw new Error('Solo se puede blindar con Aliado un Héroe libre o protegido');
+    }
+    if (!aliadoCoincideConColor(aliado, this.colorEfectivo())) {
+      throw new Error('El Aliado no cubre el color del Héroe');
+    }
+    this.protecciones.push(aliado);
+    this.blindadoPorAliado = true;
+  }
+
+  /**
+   * Chasquido: destrucción total del héroe sin importar su estado.
+   * Es la única Acción que ignora la inmunidad de blindado (regla
+   * explícita del reglamento oficial).
+   */
+  destruirPorChasquido(): CartaHeroe {
+    return this.carta;
   }
 }
